@@ -4,6 +4,13 @@ enable_language(CXX)
 enable_language(C)
 find_package(Git)
 
+set (CMAKE_CXX_STANDARD 20)
+set (CMAKE_CXX_EXTENSIONS 1) # https://cmake.org/cmake/help/latest/prop_tgt/CXX_EXTENSIONS.html#prop_tgt:CXX_EXTENSIONS
+set (CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(PAGEHOUSE_DISABLE_TESTS ON CACHE BOOL "Disable tests in libpagehouse" FORCE)
+add_subdirectory(PageHouse)
+
 if (NOT ROCKSDB_GIT_REPO)
   set(ROCKSDB_GIT_REPO "https://github.com/tikv/rocksdb.git")
 endif()
@@ -36,15 +43,12 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/util)
 
-set(DISABLE_PAGEHOUSE_TESTS ON CACHE BOOL "Disable tests in libpagehouse" FORCE)
-add_subdirectory(PageHouse)
-
 file(GLOB SOURCES src/*.cc)
 file(GLOB TEST_SOURCES src/*test.cc)
 list(REMOVE_ITEM SOURCES ${TEST_SOURCES})
 
 add_library(titan STATIC ${SOURCES} $<TARGET_OBJECTS:titan_build_version>)
-target_link_libraries (titan PUBLIC page_house)
+target_link_libraries (titan PUBLIC pagehouse)
 
 option(WITH_TITAN_TESTS "Build with tests." ON)
 option(WITH_TITAN_TOOLS "Build with tools." ON)
