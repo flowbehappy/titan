@@ -9,6 +9,7 @@
 #include "monitoring/statistics.h"
 
 #include "titan_logging.h"
+#include <V3/Universal/UniversalPageStorage.h>
 
 namespace rocksdb {
 namespace titandb {
