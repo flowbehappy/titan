@@ -146,6 +146,8 @@ public:
     PageStoragePtr getPageStore() { return page_manager->getStore(); }
     PageHouseManagerPtr getPageManager() { return page_manager; }
 
+    DBImpl * getBaseDB() { return db_impl_; }
+
 private:
     void initPageHouseLogger();
 
@@ -188,6 +190,9 @@ private:
     Poco::AutoPtr<Poco::FileChannel> log_file;
 
     PageHouseManagerPtr page_manager;
+
+    BackgroundProcessingPool thread_pool;
+    BackgroundProcessingPool::TaskHandle gc_handle;
 };
 
 } // namespace titandb

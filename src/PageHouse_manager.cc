@@ -6,24 +6,23 @@ namespace titandb
 {
 using namespace DB;
 
-PageHouseManager::PageHouseManager(const String & dbname) : root_dir(dbname + "/pagehouse"), thread_pool(1, "PH_BG_")
+PageHouseManager::PageHouseManager(const String & root_dir_) : log(&Poco::Logger::get("PageHouseManager")), root_dir(root_dir_)
 {
     auto file_provider = std::make_shared<FileProvider>();
-    PathPool path_pool({dbname}, file_provider);
-    PSDiskDelegatorPtr delegator = std::make_shared<PSDiskDelegatorGlobalSingle>(path_pool, "pagehouse");
+    PathPool path_pool({root_dir}, file_provider);
+    PSDiskDelegatorPtr delegator = std::make_shared<PSDiskDelegatorGlobalSingle>(path_pool, "v1");
     PageStorageConfig config;
-    pagestore = PageStorage::create("universal_pagehouse", delegator, config, file_provider);
+    pagestore = PageStorage::create("pagehouse_light", delegator, config, file_provider);
     pagestore->restore();
     max_pageid = pagestore->getMaxId();
-    gc_handle = thread_pool.addTask([this]() { return pagestore->gc(); });
+
+    auto dp = delegator->defaultPath();
+
+    LOG_DEBUG(log, "delegator->defaultPath(): {}", dp);
 }
 
 PageHouseManager::~PageHouseManager()
 {
-    if (!gc_handle)
-        return;
-    thread_pool.removeTask(gc_handle);
-    gc_handle = nullptr;
 }
 
 } // namespace titandb

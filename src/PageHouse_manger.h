@@ -18,7 +18,7 @@ using namespace DB;
 class PageHouseManager
 {
 public:
-    PageHouseManager(const String & dbname);
+    PageHouseManager(const String & root_dir);
 
     ~PageHouseManager();
 
@@ -30,11 +30,13 @@ public:
 
     const CompressionSettings & getCompressionSettings() { return compress_setting; }
 
+    bool triggerGC() { return pagestore->gc(); }
+
 private:
+    Poco::Logger * log;
+
     String root_dir;
     PageStoragePtr pagestore;
-    BackgroundProcessingPool thread_pool;
-    BackgroundProcessingPool::TaskHandle gc_handle;
 
     CompressionSettings compress_setting{CompressionMethod::LZ4};
 

@@ -8,8 +8,13 @@ set (CMAKE_CXX_STANDARD 20)
 set (CMAKE_CXX_EXTENSIONS 1) # https://cmake.org/cmake/help/latest/prop_tgt/CXX_EXTENSIONS.html#prop_tgt:CXX_EXTENSIONS
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set (CMAKE_CXX_FLAGS_DEBUG               "${CMAKE_CXX_FLAGS_DEBUG} -fstandalone-debug")
+set (CMAKE_C_FLAGS_DEBUG                 "${CMAKE_C_FLAGS_DEBUG} -fstandalone-debug")
+
 set(PAGEHOUSE_DISABLE_TESTS ON CACHE BOOL "Disable tests in libpagehouse" FORCE)
 add_subdirectory(PageHouse)
+
+message(INFO "CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")
 
 if (NOT ROCKSDB_GIT_REPO)
   set(ROCKSDB_GIT_REPO "https://github.com/tikv/rocksdb.git")
@@ -156,6 +161,7 @@ if (WITH_TITAN_TESTS AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
         table_builder_test
         thread_safety_test
         titan_db_test
+        PageHouse_titan_db_test
         titan_checkpoint_test
         titan_options_test
         util_test

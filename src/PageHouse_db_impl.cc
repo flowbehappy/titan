@@ -36,11 +36,11 @@ namespace titandb
 {
 
 PageHouseTitanDBImpl::PageHouseTitanDBImpl(const TitanDBOptions & options, const std::string & dbname)
-    : dbname_(dbname), env_(options.env), env_options_(options), db_options_(options)
+    : dbname_(dbname), env_(options.env), env_options_(options), db_options_(options), thread_pool(1, "PH_BG_")
 {
     if (db_options_.dirname.empty())
     {
-        db_options_.dirname = dbname_ + "/titandb";
+        db_options_.dirname = dbname_ + "/pagehouse";
     }
     if (db_options_.statistics != nullptr)
     {
@@ -53,7 +53,6 @@ PageHouseTitanDBImpl::PageHouseTitanDBImpl(const TitanDBOptions & options, const
         stats_.reset(new TitanStats(db_options_.statistics.get()));
     }
     initPageHouseLogger();
-    page_manager = std::make_shared<PageHouseManager>(dbname);
 }
 
 PageHouseTitanDBImpl::~PageHouseTitanDBImpl()
@@ -99,6 +98,9 @@ void PageHouseTitanDBImpl::initPageHouseLogger()
 
 Status PageHouseTitanDBImpl::Open(const std::vector<TitanCFDescriptor> & descs, std::vector<ColumnFamilyHandle *> * handles)
 {
+    page_manager = std::make_shared<PageHouseManager>(db_options_.dirname);
+    gc_handle = thread_pool.addTask([=]() { return page_manager->triggerGC(); });
+
     if (handles == nullptr)
     {
         return Status::InvalidArgument("handles must be non-null.");
@@ -191,6 +193,13 @@ Status PageHouseTitanDBImpl::Close()
 
 Status PageHouseTitanDBImpl::CloseImpl()
 {
+    if (gc_handle)
+    {
+        thread_pool.removeTask(gc_handle);
+        gc_handle = nullptr;
+    }
+
+    page_manager = {};
     return Status::OK();
 }
 
@@ -357,26 +366,24 @@ Status PageHouseTitanDBImpl::Write(const rocksdb::WriteOptions & options, rocksd
     if (updates->HasDelete())
     {
         // Remove the actual value from blob store
-        auto itor = updates->NewIterator();
+        auto iter = updates->NewIterator();
         std::vector<Slice> to_del_keys;
-        for (; itor->Valid(); itor->Next())
+        std::vector<ColumnFamilyHandle *> cf_handles;
+        for (iter->SeekToFirst(); iter->Valid(); iter->Next())
         {
-            auto type = itor->GetValueType();
+            auto type = iter->GetValueType();
             if (ValueType::kTypeDeletion != type && ValueType::kTypeColumnFamilyDeletion != type)
                 continue;
-            auto cfid = itor->GetColumnFamilyId();
-            auto key = itor->Key();
-            if (ValueType::kTypeColumnFamilyDeletion == type || cfid != 0)
-            {
-                // We should only use TiTan in default cf
-                TITAN_LOG_INFO(db_options_.info_log, "Write Ignoring deletion with cf [%d], key: [%s]", cfid, key.ToString().c_str());
-                continue;
-            }
+            auto cfid = iter->GetColumnFamilyId();
+            auto key = iter->Key();
             ParsedInternalKey ikey;
             auto s = ParseInternalKey(key, &ikey, false /*log_err_key*/);
             if (s.ok() && ikey.type == ValueType::kTypeBlobIndex)
             {
                 // Only handle the blob key type
+                auto cfh = db_impl_->GetColumnFamilyHandle(cfid);
+
+                cf_handles.emplace_back(cfh);
                 to_del_keys.emplace_back(key);
             }
         }
@@ -384,7 +391,7 @@ Status PageHouseTitanDBImpl::Write(const rocksdb::WriteOptions & options, rocksd
         {
             ::DB::WriteBatch wb(0);
             std::vector<std::string> values;
-            auto status = this->MultiGet(ReadOptions(), to_del_keys, &values);
+            auto status = this->MultiGet(ReadOptions(), cf_handles, to_del_keys, &values);
             for (size_t i = 0; i < values.size(); ++i)
             {
                 auto & key = to_del_keys[i];
