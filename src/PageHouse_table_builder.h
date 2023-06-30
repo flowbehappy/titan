@@ -1,8 +1,6 @@
 #pragma once
 
-#include "blob_file_builder.h"
-#include "blob_file_manager.h"
-#include "blob_file_set.h"
+#include "blob_format.h"
 #include "rocksdb/types.h"
 #include "table/table_builder.h"
 #include "titan/options.h"
@@ -14,7 +12,6 @@ namespace rocksdb
 namespace titandb
 {
 
-
 class PageHouseTableBuilder : public TableBuilder
 {
 public:
@@ -25,7 +22,6 @@ public:
         std::unique_ptr<TableBuilder> base_builder,
         const PageHouseManagerPtr & pagehouse_manager,
         TitanStats * stats,
-        int merge_level,
         int target_level)
         : cf_id_(cf_id),
           db_options_(db_options),
@@ -33,8 +29,7 @@ public:
           base_builder_(std::move(base_builder)),
           pagehouse_manager_(pagehouse_manager),
           stats_(stats),
-          target_level_(target_level),
-          merge_level_(merge_level)
+          target_level_(target_level)
     {
     }
 
@@ -65,17 +60,9 @@ private:
 
     bool ok() const { return status().ok(); }
 
-    std::unique_ptr<BlobFileBuilder::BlobRecordContext> NewCachedRecordContext(const ParsedInternalKey & ikey, const Slice & value);
-
     void AddBlob(const ParsedInternalKey & ikey, const Slice & value);
 
-    bool ShouldMerge(const std::shared_ptr<BlobFileMeta> & file);
-
-    void FinishBlobFile();
-
     void UpdateInternalOpStats();
-
-    Status GetBlobRecord(const BlobIndex & index, BlobRecord * record, PinnableSlice * buffer);
 
     Status status_;
     uint32_t cf_id_;
@@ -85,12 +72,10 @@ private:
     PageHouseManagerPtr  pagehouse_manager_;
     TitanStats * stats_;
 
+    PageIdU64s written_pageids;
+
     // target level in LSM-Tree for generated SSTs and blob files
     int target_level_;
-    // with cf_options_.level_merge == true, if target_level_ is higher than or
-    // equals to merge_level_, values belong to blob files which have lower level
-    // than target_level_ will be merged to new blob file
-    int merge_level_;
 
     // counters
     uint64_t bytes_read_ = 0;

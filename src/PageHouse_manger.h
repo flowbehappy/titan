@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Common/BackgroundProcessingPool.h>
+#include <IO/CompressionSettings.h>
 #include <V3/PageStorageImpl.h>
 #include <V3/Universal/UniversalPageStorage.h>
 
@@ -27,11 +28,15 @@ public:
     UInt64 getAndIncrNextPageId() { return max_pageid.fetch_add(1, std::memory_order_relaxed); }
     UInt64 getMaxPageId() { return max_pageid.load(std::memory_order_relaxed); }
 
+    const CompressionSettings & getCompressionSettings() { return compress_setting; }
+
 private:
     String root_dir;
     PageStoragePtr pagestore;
     BackgroundProcessingPool thread_pool;
     BackgroundProcessingPool::TaskHandle gc_handle;
+
+    CompressionSettings compress_setting{CompressionMethod::LZ4};
 
     std::atomic<UInt64> max_pageid;
 };

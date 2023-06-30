@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Poco/Buffer.h>
+
 #include <string>
 #include <utility>
 
@@ -69,8 +71,12 @@ public:
             return Decision::kKeep;
         }
 
-        auto page = pagestore->read(0, blob_index.file_number);
-        Slice old_value(page.data.data(), page.data.size());
+        auto page_id = blob_index.file_number;
+        auto page_size = blob_index.blob_handle.size;
+        auto page = pagestore->read(0, page_id);
+        auto buffer = page.getDataWithDecompressed(page_size);
+
+        Slice old_value(buffer.begin(), page_size);
         auto decision = original_filter_->FilterV3(level, key, seqno, kValue, old_value, new_value, skip_until);
 
         // It would be a problem if it change the value whereas the value_type
