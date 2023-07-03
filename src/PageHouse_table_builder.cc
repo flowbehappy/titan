@@ -112,7 +112,7 @@ void PageHouseTableBuilder::AddBlob(const ParsedInternalKey & ikey, const Slice 
     bytes_written_ += record.key.size() + record.value.size();
 
     // Write value to page storage
-    auto page_id = pagehouse_manager_->getAndIncrNextPageId();
+    auto page_id = pagehouse_manager_->getNextPageId();
     ::DB::WriteBatch wb(0);
     wb.putPageAndCompress(page_id, 0, value.ToStringView(), pagehouse_manager_->getCompressionSettings());
     pagehouse_manager_->getStore()->write(std::move(wb));
@@ -127,7 +127,19 @@ void PageHouseTableBuilder::AddBlob(const ParsedInternalKey & ikey, const Slice 
     new_ikey.type = kTypeBlobIndex;
     std::string new_key;
     AppendInternalKey(&new_key, new_ikey);
-    base_builder_->Add(new_key, value);
+
+    std::string index_value;
+    BlobIndex index;
+    index.file_number = page_id;
+    index.blob_handle.offset = 0;
+    index.blob_handle.size = value.size();
+
+    index.EncodeTo(&index_value);
+
+    Slice new_key_slice(new_key);
+    Slice new_value(index_value);
+
+    base_builder_->Add(new_key_slice, new_value);
 }
 
 Status PageHouseTableBuilder::status() const

@@ -25,7 +25,7 @@ public:
     PageStoragePtr getStore() { return pagestore; }
     String getRootDir() { return root_dir; }
 
-    UInt64 getAndIncrNextPageId() { return max_pageid.fetch_add(1, std::memory_order_relaxed); }
+    UInt64 getNextPageId() { return max_pageid.fetch_add(1, std::memory_order_relaxed) + 1; }
     UInt64 getMaxPageId() { return max_pageid.load(std::memory_order_relaxed); }
 
     const CompressionSettings & getCompressionSettings() { return compress_setting; }
@@ -36,6 +36,7 @@ private:
     Poco::Logger * log;
 
     String root_dir;
+    PathPool path_pool;
     PageStoragePtr pagestore;
 
     CompressionSettings compress_setting{CompressionMethod::LZ4};

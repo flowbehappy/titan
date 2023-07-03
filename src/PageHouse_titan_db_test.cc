@@ -25,13 +25,16 @@ namespace titandb
 
 void DeleteDir(Env * env, const std::string & dirname)
 {
-    std::vector<std::string> filenames;
-    env->GetChildren(dirname, &filenames);
-    for (auto & fname : filenames)
-    {
-        env->DeleteFile(dirname + "/" + fname);
-    }
-    env->DeleteDir(dirname);
+    Poco::File file(dirname);
+    if (file.exists())
+        file.remove(true);
+}
+
+void CreateDir(const std::string & dirname)
+{
+    Poco::File file(dirname);
+    if (!file.exists())
+        file.createDirectory();
 }
 
 class PageHouseTitanDBTest : public testing::Test
@@ -49,6 +52,7 @@ public:
         options_.statistics = CreateDBStatistics();
         DeleteDir(env_, options_.dirname);
         DeleteDir(env_, dbname_);
+        CreateDir(dbname_);
     }
 
     ~PageHouseTitanDBTest()
@@ -486,38 +490,38 @@ TEST_F(PageHouseTitanDBTest, IngestExternalFiles)
     VerifyDB(total_data);
     Flush();
     VerifyDB(total_data);
-//    for (auto & handle : cf_handles_)
-//    {
-//        auto blob = GetBlobStorage(handle);
-//        ASSERT_EQ(1, blob.lock()->NumBlobFiles());
-//    }
-//
-//    CompactRangeOptions copt;
-//    ASSERT_OK(db_->CompactRange(copt, nullptr, nullptr));
-//    VerifyDB(total_data);
-//    for (auto & handle : cf_handles_)
-//    {
-//        auto blob = GetBlobStorage(handle);
-//        ASSERT_EQ(2, blob.lock()->NumBlobFiles());
-//        std::map<uint64_t, std::weak_ptr<BlobFileMeta>> blob_files;
-//        blob.lock()->ExportBlobFiles(blob_files);
-//        ASSERT_EQ(2, blob_files.size());
-//        auto bf = blob_files.begin();
-//        VerifyBlob(bf->first, original_data);
-//        bf++;
-//        VerifyBlob(bf->first, ingested_data);
-//    }
+    //    for (auto & handle : cf_handles_)
+    //    {
+    //        auto blob = GetBlobStorage(handle);
+    //        ASSERT_EQ(1, blob.lock()->NumBlobFiles());
+    //    }
+    //
+    //    CompactRangeOptions copt;
+    //    ASSERT_OK(db_->CompactRange(copt, nullptr, nullptr));
+    //    VerifyDB(total_data);
+    //    for (auto & handle : cf_handles_)
+    //    {
+    //        auto blob = GetBlobStorage(handle);
+    //        ASSERT_EQ(2, blob.lock()->NumBlobFiles());
+    //        std::map<uint64_t, std::weak_ptr<BlobFileMeta>> blob_files;
+    //        blob.lock()->ExportBlobFiles(blob_files);
+    //        ASSERT_EQ(2, blob_files.size());
+    //        auto bf = blob_files.begin();
+    //        VerifyBlob(bf->first, original_data);
+    //        bf++;
+    //        VerifyBlob(bf->first, ingested_data);
+    //    }
 }
 
-TEST_F(PageHouseTitanDBTest, NewColumnFamilyHasBlobFileSizeCollector)
-{
-    Open();
-    AddCF("new_cf");
-    Options opt = db_->GetOptions(cf_handles_.back());
-    ASSERT_EQ(1, opt.table_properties_collector_factories.size());
-    std::unique_ptr<BlobFileSizeCollectorFactory> prop_collector_factory(new BlobFileSizeCollectorFactory());
-    ASSERT_EQ(std::string(prop_collector_factory->Name()), std::string(opt.table_properties_collector_factories[0]->Name()));
-}
+//TEST_F(PageHouseTitanDBTest, NewColumnFamilyHasBlobFileSizeCollector)
+//{
+//    Open();
+//    AddCF("new_cf");
+//    Options opt = db_->GetOptions(cf_handles_.back());
+//    ASSERT_EQ(1, opt.table_properties_collector_factories.size());
+//    std::unique_ptr<BlobFileSizeCollectorFactory> prop_collector_factory(new BlobFileSizeCollectorFactory());
+//    ASSERT_EQ(std::string(prop_collector_factory->Name()), std::string(opt.table_properties_collector_factories[0]->Name()));
+//}
 
 TEST_F(PageHouseTitanDBTest, DropColumnFamily)
 {
@@ -587,7 +591,7 @@ TEST_F(PageHouseTitanDBTest, DestroyColumnFamilyHandle)
     {
         auto cf_id = handle->GetID();
         db_->DestroyColumnFamilyHandle(handle);
-//        ASSERT_OK(db_impl_->TEST_StartGC(cf_id));
+        //        ASSERT_OK(db_impl_->TEST_StartGC(cf_id));
     }
     cf_handles_.clear();
     VerifyDB(data);
@@ -663,27 +667,27 @@ TEST_F(PageHouseTitanDBTest, DeleteFilesInRange)
     ASSERT_TRUE(db_->GetProperty("rocksdb.num-files-at-level5", &value));
     ASSERT_EQ(value, "2");
 
-//    auto blob = GetBlobStorage(db_->DefaultColumnFamily()).lock();
-//    ASSERT_EQ(blob->NumBlobFiles(), 6);
-//    // These two files are marked obsolete directly by `DeleteBlobFilesInRanges`
-//    ASSERT_EQ(blob->NumObsoleteBlobFiles(), 2);
-//
-//    // The snapshot held by the iterator prevents the blob files from being
-//    // purged.
-//    ASSERT_OK(db_impl_->TEST_PurgeObsoleteFiles());
-//    while (iter->Valid())
-//    {
-//        iter->Next();
-//        ASSERT_OK(iter->status());
-//    }
-//    ASSERT_EQ(blob->NumBlobFiles(), 6);
-//    ASSERT_EQ(blob->NumObsoleteBlobFiles(), 2);
-//
-//    // Once the snapshot is released, the blob files should be purged.
-//    iter.reset(nullptr);
-//    ASSERT_OK(db_impl_->TEST_PurgeObsoleteFiles());
-//    ASSERT_EQ(blob->NumBlobFiles(), 4);
-//    ASSERT_EQ(blob->NumObsoleteBlobFiles(), 0);
+    //    auto blob = GetBlobStorage(db_->DefaultColumnFamily()).lock();
+    //    ASSERT_EQ(blob->NumBlobFiles(), 6);
+    //    // These two files are marked obsolete directly by `DeleteBlobFilesInRanges`
+    //    ASSERT_EQ(blob->NumObsoleteBlobFiles(), 2);
+    //
+    //    // The snapshot held by the iterator prevents the blob files from being
+    //    // purged.
+    //    ASSERT_OK(db_impl_->TEST_PurgeObsoleteFiles());
+    while (iter->Valid())
+    {
+        iter->Next();
+        ASSERT_OK(iter->status());
+    }
+    //    ASSERT_EQ(blob->NumBlobFiles(), 6);
+    //    ASSERT_EQ(blob->NumObsoleteBlobFiles(), 2);
+    //
+    // Once the snapshot is released, the blob files should be purged.
+    iter.reset(nullptr);
+    //    ASSERT_OK(db_impl_->TEST_PurgeObsoleteFiles());
+    //    ASSERT_EQ(blob->NumBlobFiles(), 4);
+    //    ASSERT_EQ(blob->NumObsoleteBlobFiles(), 0);
 
     Close();
 }

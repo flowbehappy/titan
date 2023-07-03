@@ -136,7 +136,8 @@ public:
             return Slice();
         if (!iter_->IsBlob())
             return iter_->value();
-        return record_.value;
+
+        return Slice(cur_buf.begin(), cur_buf.size());
     }
 
     bool seqno(SequenceNumber * number) const override { return iter_->seqno(number); }
@@ -179,8 +180,6 @@ private:
         auto tmp_buf = page.getDataWithDecompressed(page_size);
         cur_buf.swap(tmp_buf);
 
-        Slice slice(cur_buf.begin(), page_size);
-        record_.DecodeFrom(&slice);
         return;
     }
 

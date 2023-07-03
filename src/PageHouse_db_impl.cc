@@ -1,5 +1,3 @@
-#include "PageHouse_db_impl.h"
-
 #include <Common/UnifiedLogFormatter.h>
 #include <Poco/Exception.h>
 #include <Poco/Ext/LevelFilterChannel.h>
@@ -174,6 +172,21 @@ Status PageHouseTitanDBImpl::OpenImpl(const std::vector<TitanCFDescriptor> & des
         return s;
     }
     db_impl_ = reinterpret_cast<DBImpl *>(db_->GetRootDB());
+
+    assert(handles->size() == descs.size());
+    std::vector<ColumnFamilyHandle*> cf_with_compaction;
+    for (size_t i = 0; i < descs.size(); i++) {
+        cf_info_.emplace((*handles)[i]->GetID(),
+                         PageHouseTitanColumnFamilyInfo(
+                             {(*handles)[i]->GetName(),
+                              ImmutableTitanCFOptions(descs[i].options),
+                              MutableTitanCFOptions(descs[i].options),
+                              descs[i].options.table_factory /*base_table_factory*/,
+                              titan_table_factories[i]}));
+        if (!descs[i].options.disable_auto_compactions) {
+            cf_with_compaction.push_back((*handles)[i]);
+        }
+    }
     return s;
 }
 
