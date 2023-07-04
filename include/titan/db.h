@@ -21,13 +21,13 @@ struct TitanCFDescriptor {
 class TitanDB : public StackableDB {
  public:
   static Status Open(const TitanOptions& options, const std::string& dbname,
-                     TitanDB** db, bool use_pagehouse = false);
+                     TitanDB** db, bool use_pagehouse = true);
 
   static Status Open(const TitanDBOptions& db_options,
                      const std::string& dbname,
                      const std::vector<TitanCFDescriptor>& descs,
                      std::vector<ColumnFamilyHandle*>* handles,
-                     TitanDB** db, bool use_pagehouse = false);
+                     TitanDB** db, bool use_pagehouse = true);
 
   TitanDB() : StackableDB(nullptr) {}
 
