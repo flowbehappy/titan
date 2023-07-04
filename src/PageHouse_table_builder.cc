@@ -46,7 +46,7 @@ void PageHouseTableBuilder::Add(const Slice & key, const Slice & value)
 
         auto page_id = index.file_number;
         auto value_size = index.blob_handle.size;
-        auto page = pagehouse_manager_->getStore()->read(0, index.file_number, {}, {}, false);
+        auto page = pagehouse_manager_->getStore()->read(0, index.file_number, {}, page_snap_, false);
         UpdateIOBytes(prev_bytes_read, prev_bytes_written, &io_bytes_read_, &io_bytes_written_);
         if (page.isValid())
         {

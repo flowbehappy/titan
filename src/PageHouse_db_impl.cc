@@ -174,16 +174,17 @@ Status PageHouseTitanDBImpl::OpenImpl(const std::vector<TitanCFDescriptor> & des
     db_impl_ = reinterpret_cast<DBImpl *>(db_->GetRootDB());
 
     assert(handles->size() == descs.size());
-    std::vector<ColumnFamilyHandle*> cf_with_compaction;
-    for (size_t i = 0; i < descs.size(); i++) {
+    std::vector<ColumnFamilyHandle *> cf_with_compaction;
+    for (size_t i = 0; i < descs.size(); i++)
+    {
         cf_info_.emplace((*handles)[i]->GetID(),
-                         PageHouseTitanColumnFamilyInfo(
-                             {(*handles)[i]->GetName(),
-                              ImmutableTitanCFOptions(descs[i].options),
-                              MutableTitanCFOptions(descs[i].options),
-                              descs[i].options.table_factory /*base_table_factory*/,
-                              titan_table_factories[i]}));
-        if (!descs[i].options.disable_auto_compactions) {
+            PageHouseTitanColumnFamilyInfo({(*handles)[i]->GetName(),
+                ImmutableTitanCFOptions(descs[i].options),
+                MutableTitanCFOptions(descs[i].options),
+                descs[i].options.table_factory /*base_table_factory*/,
+                titan_table_factories[i]}));
+        if (!descs[i].options.disable_auto_compactions)
+        {
             cf_with_compaction.push_back((*handles)[i]);
         }
     }
@@ -376,6 +377,10 @@ Status PageHouseTitanDBImpl::Put(const rocksdb::WriteOptions & options,
 
 Status PageHouseTitanDBImpl::Write(const rocksdb::WriteOptions & options, rocksdb::WriteBatch * updates, PostWriteCallback * callback)
 {
+    auto status = db_->Write(options, updates, callback);
+    if (!status.ok())
+        return status;
+
     if (updates->HasDelete())
     {
         // Remove the actual value from blob store
@@ -404,12 +409,12 @@ Status PageHouseTitanDBImpl::Write(const rocksdb::WriteOptions & options, rocksd
         {
             ::DB::WriteBatch wb(0);
             std::vector<std::string> values;
-            auto status = this->MultiGet(ReadOptions(), cf_handles, to_del_keys, &values);
+            auto statuses = this->MultiGet(ReadOptions(), cf_handles, to_del_keys, &values);
             for (size_t i = 0; i < values.size(); ++i)
             {
                 auto & key = to_del_keys[i];
                 Slice value(values[i]);
-                if (!status[i].ok())
+                if (!statuses[i].ok())
                 {
                     TITAN_LOG_WARN(
                         db_options_.info_log, "Write Can not find key: [%s] in base db. Ignoring deletion.", key.ToString().c_str());
@@ -428,7 +433,7 @@ Status PageHouseTitanDBImpl::Write(const rocksdb::WriteOptions & options, rocksd
         }
     }
 
-    return db_->Write(options, updates, callback);
+    return status;
 }
 
 Status PageHouseTitanDBImpl::MultiBatchWrite(
@@ -574,6 +579,7 @@ Iterator * PageHouseTitanDBImpl::NewIteratorImpl(
     const TitanReadOptions & options, ColumnFamilyHandle * handle, std::shared_ptr<ManagedSnapshot> snapshot)
 {
     auto cfd = reinterpret_cast<ColumnFamilyHandleImpl *>(handle)->cfd();
+    auto page_snap = page_manager->getStore()->getSnapshot("NewIteratorImpl");
 
     std::unique_ptr<ArenaWrappedDBIter> iter(db_impl_->NewIteratorImpl(options,
         cfd,
@@ -584,6 +590,7 @@ Iterator * PageHouseTitanDBImpl::NewIteratorImpl(
     return new PageHouseDBIterator( //
         options,
         page_manager->getStore(),
+        page_snap,
         snapshot,
         std::move(iter),
         env_->GetSystemClock().get(),

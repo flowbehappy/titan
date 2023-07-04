@@ -1,11 +1,11 @@
 #pragma once
 
+#include "PageHouse_manger.h"
 #include "blob_format.h"
 #include "rocksdb/types.h"
 #include "table/table_builder.h"
 #include "titan/options.h"
 #include "titan_stats.h"
-#include "PageHouse_manger.h"
 
 namespace rocksdb
 {
@@ -28,6 +28,7 @@ public:
           cf_options_(cf_options),
           base_builder_(std::move(base_builder)),
           pagehouse_manager_(pagehouse_manager),
+          page_snap_(pagehouse_manager->getStore()->getSnapshot("PageHouseTableBuilder")),
           stats_(stats),
           target_level_(target_level)
     {
@@ -69,7 +70,8 @@ private:
     TitanDBOptions db_options_;
     TitanCFOptions cf_options_;
     std::unique_ptr<TableBuilder> base_builder_;
-    PageHouseManagerPtr  pagehouse_manager_;
+    PageHouseManagerPtr pagehouse_manager_;
+    ::DB::PageStorageSnapshotPtr page_snap_;
     TitanStats * stats_;
 
     PageIdU64s written_pageids;

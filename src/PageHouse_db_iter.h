@@ -29,12 +29,20 @@ public:
     PageHouseDBIterator( //
         const TitanReadOptions & options,
         const ::DB::PageStoragePtr & storage,
+        ::DB::PageStorageSnapshotPtr page_snap,
         std::shared_ptr<ManagedSnapshot> snap,
         std::unique_ptr<ArenaWrappedDBIter> iter,
         SystemClock * clock,
         TitanStats * stats,
         Logger * info_log)
-        : options_(options), storage_(storage), snap_(snap), iter_(std::move(iter)), clock_(clock), stats_(stats), info_log_(info_log)
+        : options_(options),
+          storage_(storage),
+          page_snap_(page_snap),
+          snap_(snap),
+          iter_(std::move(iter)),
+          clock_(clock),
+          stats_(stats),
+          info_log_(info_log)
     {
     }
 
@@ -170,7 +178,7 @@ private:
 
         auto page_id = index.file_number;
         auto page_size = index.blob_handle.size;
-        auto page = storage_->read(0, page_id, {}, {}, false);
+        auto page = storage_->read(0, page_id, {}, page_snap_, false);
         if (!page.isValid())
         {
             TITAN_LOG_ERROR(
@@ -189,6 +197,7 @@ private:
 
     TitanReadOptions options_;
     ::DB::PageStoragePtr storage_;
+    ::DB::PageStorageSnapshotPtr page_snap_;
     std::shared_ptr<ManagedSnapshot> snap_;
     std::unique_ptr<ArenaWrappedDBIter> iter_;
     std::unordered_map<uint64_t, std::unique_ptr<BlobFilePrefetcher>> files_;
