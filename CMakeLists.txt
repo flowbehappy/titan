@@ -14,7 +14,7 @@ set (CMAKE_C_FLAGS_DEBUG                 "${CMAKE_C_FLAGS_DEBUG} -fstandalone-de
 set(PAGEHOUSE_DISABLE_TESTS ON CACHE BOOL "Disable tests in libpagehouse" FORCE)
 add_subdirectory(PageHouse)
 
-message(INFO "CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")
+message(STATUS "CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")
 
 if (NOT ROCKSDB_GIT_REPO)
   set(ROCKSDB_GIT_REPO "https://github.com/tikv/rocksdb.git")
@@ -23,6 +23,8 @@ endif()
 if (NOT ROCKSDB_GIT_BRANCH)
   set(ROCKSDB_GIT_BRANCH "6.29.tikv")
 endif()
+
+message(STATUS "ROCKSDB_DIR=${ROCKSDB_DIR}")
 
 if (NOT DEFINED ROCKSDB_DIR)
   if (GIT_FOUND)

@@ -39,7 +39,7 @@ private:
     PathPool path_pool;
     PageStoragePtr pagestore;
 
-    CompressionSettings compress_setting{CompressionMethod::LZ4};
+    CompressionSettings compress_setting{CompressionMethod::kLZ4};
 
     std::atomic<UInt64> max_pageid;
 };
